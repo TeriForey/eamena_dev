@@ -93,6 +93,39 @@ class SearchEngine(object):
 
         return ret
 
+    def scan(self, **kwargs):
+        """
+        Search for an item using the scan helper.
+        Pass an index, doc_type and id to get a specific document
+        Pass a body with a query dsl to perform a search
+        :return: search results
+        """
+
+        query = kwargs.get('query', None)
+        index = kwargs.get('index', None)
+        id = kwargs.get('id', None)
+
+        if index is None:
+            raise NotImplementedError("You must specify an 'index' in your call to search")
+
+        if id:
+            if isinstance(id, list):
+                kwargs.setdefault('body', {'ids': kwargs.pop('id')})
+                return self.es.mget(**kwargs)
+            else:
+                return self.es.get(**kwargs)
+
+        ret = None
+        try:
+            ret = helpers.scan(self.es, size=500, **kwargs)
+        except Exception as detail:
+            self.logger.warning(
+                '%s: WARNING: search failed for query: %s \nException detail: %s\n' % (datetime.now(), query, detail))
+            pass
+
+        return ret
+
+
     def index_term(self, term, id, context='', options={}):
         """
         If the term is already indexed, then simply increment the count and add the id of the term to the existing index.
